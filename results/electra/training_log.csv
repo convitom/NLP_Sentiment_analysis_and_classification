@@ -1,1 +1,0 @@
-epoch,train_loss,val_loss,val_micro_f1,val_macro_f1,val_weighted_f1,lr
