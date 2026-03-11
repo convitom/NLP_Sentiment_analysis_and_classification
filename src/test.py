@@ -108,6 +108,7 @@ def _plot_thresholds(
 
 
 
+def _plot_prediction_heatmap(
     probs: np.ndarray,
     labels: np.ndarray,
     class_names: list,
@@ -236,7 +237,6 @@ def evaluate(config_path: str = "config/config.yaml") -> Dict:
     # ── Console summary ──────────────────────────────────────────────────────
     print("\n" + "=" * 62)
     print(f"  Model            : {model_name}")
-    print(f"  Threshold        : {threshold}")
     print(f"  Micro  F1        : {micro_f1:.4f}")
     print(f"  Macro  F1        : {macro_f1:.4f}")
     print(f"  Weighted F1      : {weighted_f1:.4f}")
