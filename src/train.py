@@ -140,6 +140,8 @@ def _run_epoch(
     epoch:         int,
     total_epochs:  int,
     threshold:     float = 0.5,
+    use_amp:       bool = False,
+    amp_dtype:     torch.dtype = torch.float16,
 ) -> Tuple[float, float, float, float]:
     """
     Run one forward (+ optional backward) pass.
@@ -148,6 +150,9 @@ def _run_epoch(
         (avg_loss, micro_f1, macro_f1, weighted_f1)
         F1 scores are 0.0 for train phase (not computed to save time).
     """
+    # Resolve amp_dtype from device if not explicitly specified by caller
+    if use_amp and amp_dtype is None:
+        amp_dtype = torch.bfloat16 if device.type == "cuda" and torch.cuda.is_bf16_supported() else torch.float16
     is_train = phase == "train"
     model.train() if is_train else model.eval()
 
@@ -168,7 +173,8 @@ def _run_epoch(
             if is_train:
                 optimizer.zero_grad(set_to_none=True)
 
-            with torch.autocast(device_type=device.type, dtype=amp_dtype, enabled=use_amp):
+            _dtype = amp_dtype if (use_amp and amp_dtype is not None) else torch.float16
+            with torch.autocast(device_type=device.type, dtype=_dtype, enabled=use_amp):
                 logits = model(input_ids, attention_mask)
                 loss   = criterion(logits, labels)
 
@@ -309,11 +315,13 @@ def train(config_path: str = "config/config.yaml") -> Dict:
         train_loss, _, _, _ = _run_epoch(
             model, train_loader, criterion, optimizer, scheduler,
             scaler, device, "train", epoch, epochs, threshold,
+            use_amp=use_amp, amp_dtype=amp_dtype,
         )
 
         val_loss, micro_f1, macro_f1, weighted_f1 = _run_epoch(
             model, val_loader, criterion, None, None,
             None, device, "val", epoch, epochs, threshold,
+            use_amp=use_amp, amp_dtype=amp_dtype,
         )
 
         current_lr = optimizer.param_groups[0]["lr"]
